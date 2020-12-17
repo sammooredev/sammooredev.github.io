@@ -6,7 +6,7 @@
 	<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300&display=swap" rel="stylesheet">
 	<link rel="stylesheet" type="text/css" href="./blog.css">
 	<style type="text/css">
-		p, h1, h2, h3
+		p, h1, h2, h3, h4, ul, li
 		{
 		   font-size: 1em !important;
 		   color: #000 !important;
@@ -29,9 +29,11 @@
 			<div class="divTableRow">
 				<div id="row-left" class="divTableCell">
 					<div class="navbox" id="js-navigation">
-						<h1>Navigation</h1>					
+						<h1>Navigation</h1>
+						<small><i>Dec 16 2020</i></small>
+						<p><a href="./bug-hunting-redacted-cms.html">[Chaining XSS & CSRF to takeover webstores]</a></p>
+						<small><i>Dec 15 2020</i></small>
 					    <p><a href="./dangling-c-name-records.html">[Exploiting Dangling C-Name Records]</a></p>
-			
 				  </div>
 				</div>
 				<div id="row-right" class="divTableCell">
@@ -42,7 +44,7 @@
 			</div>
 		</div>
 	</div>
-	<script src="https://code.jquery.com/jquery-1.9.1.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 	<script>
 	  $(document).ready(function() {
 	    $('#js-content').load('/intro.html');

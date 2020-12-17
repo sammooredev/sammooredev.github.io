@@ -2,10 +2,10 @@
 <br></br>
 <i><small>Confidential domains are redacted in this blog post</small></i>
 <h2>Discovery:</h2>
-<p>One day I decided to do some recon on a bug bounty program I liked. This program has an open scope that included all subdomains: <u>*.redacted.com</u></p>
+<p>One day I decided to do some recon on a bug bounty program I liked. This program has an open scope that includes all subdomains: <u>*.redacted.com</u></p>
 <p>I ran their domain through my recon script, and took screenshots of all the found subdomains. Reviewing the screenshots, I discovered something that didn't look right.</p>
 <p>A screenshot of <u>app.redacted.redacted.com</u> displayed this:</p>
-<img src="./images/dangling-c-name-record.png" height="400px" width="500px">
+<img src="./images/dangling-c-name-images/dangling-c-name-record.png" height="400px" width="500px">
 <p>This immediately caught my attention for two reasons:</p>
 <p>&emsp;&emsp;1. I had run recon on this program before, and had never seen a screenshot that looked like this</p>
 <p>&emsp;&emsp;2. hugedomains.com sounds like a place you sell domains, so my brain jumped to subdomain takeover</p>
@@ -15,5 +15,6 @@
 <p>It turned out that <u>app.redacted.redacted.com</u> had a C-Name record pointing to a domain called redacted-arena.com, which was for sale on hugedomains.com</p>
 <p>This explains why <u>app.redacted.redacted.com</u> was a hugedomains.com advertisment, it was serving content from the for sale domain! This means if we bought redacted-arena.com, we could serve whatever content we wanted on <u>app.redacted.redacted.com</u>!</p>
 <p>I immediately checked the price of redacted-arena.com, 3295$! I cant afford that. '-.-</p>
-<p>Despite not actually exploiting the dangling c-name, I reported the vulnerability through hackerone, and recieved a bounty. ;D</p>
+<p>Despite not actually exploiting the dangling c-name, I reported the vulnerability through hackerone, and recieved a bounty. &#128516;</p>
+<br></br>
 <p>If you read this far, thank you. Hit me up on <a href="https://twitter.com/sammooore">twitter</a> if you have comments, questions, or suggestions.</p>
