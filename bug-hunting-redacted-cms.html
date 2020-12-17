@@ -1,0 +1,118 @@
+<style type="text/css">
+	.images-sidebyside {
+       float: left;
+
+    }
+	.container{
+		display: block;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: flex-start;
+		margin-bottom: 100px;
+		
+	}
+
+	#xss-pop-img {
+		flex: 1;
+		margin-top: 18px;
+		max-width: 100%;
+		height: auto;
+		max-height: 100%;
+	}
+</style>
+<h1>Bug Hunting - Redacted CMS - Chaining XSS & CSRF to takeover webstores</h1>
+<br></br>
+<i><small>The webstore platform has given me permission to write this post, but they have asked to remain anonymous.</small></i>
+<p>TLDR:</p>
+<p>This is a story about finding some bugs on a webstore platform. Specifically XSS & CSRF, and how I chained the two vulnerabilities together to take over any webstore on the platform</p>
+<h2>time line:</h2>
+<ul>
+  <li><i>1/9/2020</i> - Discovered redacted platform through indexed security.txt listing, starting looking for bugs.</li>
+  <li><i>1/9/2020</i> - Sent email to platform regarding stored XSS/HTML injection bugs</li>
+  <li><i>2/9/2020</i> - Reported bugs fixed</li>
+  <li><i>4/9/2020</i> - Bypassed XSS mitigation, further hunting leads to XSS & CSRF on admin panel. Bugs are combined into a website takeover exploit. Bugs reported same day.</li>
+  <li><i>16/12/2020</i> - Decided to write a blog post detailing this experience :)</li>
+</ul>
+<h2>How I stumbled across Redacted CMS, and why I chose to hunt for bugs there</h2>
+<p>One morning on the first of September, I was itching to find some bugs. I had recently discovered a website called <a href="https://firebounty.com/">firebounty.com</a>. Firebounty indexes websites with a bug bounty program, or a <a href="https://securitytxt.org/">security.txt</a> listing.</p>
+<p>Scrolling through the list of sites, I decided to check out a site that offered a marketplace for computer repair services. They had a security.txt which linked to a CMS the store was built on. At this point, I decided to start hunting for bugs on the computer repair store.</p>
+<br></br>
+<h2>Part 1 - The first XSS</h2>
+<p>Browsing the site, I learned about the functionality it offered. There were two ways to use the site, either as a customer, or as someone offering local computer repair services. People offering their services can create an advertisement, which is displayed on the home page for customers to interact with. I decided to poke around creating an advertisement, looking for classic XSS bugs.</p>
+<p>I placed some XSS payloads in the title, description, location, and ville tags:</p>
+
+<div class="images-sidebyside">
+	<figure>		
+  			<img src="./images/redacted-cms-images/redacted-cms-1.png" width="" height="500px" border="1px">
+  			<figcaption><small><i>using XSS payloads while creating an advertisment</i></small></figcaption>
+  		
+	</figure>
+</div>
+<div class="container">
+		<img id="xss-pop-img" src="./images/redacted-cms-images/xss-title-pop-1.png" border="1px">
+	  	<img id="xss-pop-img" src="./images/redacted-cms-images/xss-descrip-pop.png" border="1px">
+	  	<img id="xss-pop-img" src="./images/redacted-cms-images/xss-ville-pop.png" border="1px">	  
+</div>
+<br></br>
+<h1>Stored XSS!</h1>
+<p>Upon visiting the page where my AD was listed, I had three alerts pop up. This indicated stored XSS at three different locations.</p>
+<br></br>
+<br></br>
+<h2>Reporting</h2>
+<p>This repair shop website was a client of the CMS, so I reported the bug immediately. It was swiftly fixed, but I was left thinking... </p>
+<p>I wonder what other attack surface there may be elsewhere on this CMS. I made an account with the CMS platform and started up a webstore of my own for testing.</p>
+<br></br>
+<h2>Part 2 - The Admin Panel</h2>
+<p>This part will be split into three sections.</p>
+<p> &emsp;&emsp;1. an XSS bug</p>
+<p> &emsp;&emsp;2. a CSRF bug</p>
+<p> &emsp;&emsp;3. Combing 1 & 2 to build a website takeover exploit</p>
+<h1>XSS bug on the Admin Panel</h1>
+<p>Once I had set up my own webstore, and had access to the admin panel, I considered what attack scenarios would have the most impact.</p>
+<p>I decided to look for an XSS bug that would come from the customer site, and execute in the admin panel.</p>
+<p>The admin panel has a section calling "Listings" where all the advertisments made by sellers show up in a list. I figured that the XSS from earlier might render unfiltered on this admin panel the same way it did on the customer facing side.</p>
+<p>I tested with the same XSS payloads from earlier, but I realized they had made a patch...</p>
+<p>It turned out their patch was to remove everything after "/></p>
+
+<p>This was trivially bypassed by not including "/> at the start of the payload, and instead sending any html element:</p>
+<img src="./images/redacted-cms-images/xss-bypass.png">
+<p>I tried using some other elements, and it turned out most would render properly. One of which was the iframe tag, which will come in handy later.</p>
+<p>Sadly, I dont have an image of the XSS/HTML injection on the admin panel, but thats ok. The important thing to remember is we now have XSS/HTML injection on the admin panel, that can be caused by any user who makes a listing. From here, the question is, how can we increase the impact? The CSRF hunt begins.</p>
+<h1>CSRF on "add staff user" Functionality</h1>
+<small><i>see where this is going yet?</i></small>
+<p>Knowing I have an XSS on the admin panel, I decided to look around for CSRF bugs on important functionality. If any existed, we could invoke them from our XSS, automating exploitation. After browsing the settings pages, I came across something called "Staff Accounts". This is a form where you can add a staff account, which is effectively another admin. The form uses an email, so whatever email is used will recieve an email granting admin access to the website.</p>
+<p>This very critical form did not have CSRF protection.</p>
+<div>
+	<center> 
+		<img src="./images/redacted-cms-images/csrf-on-staff-add.png" border="1px">
+		<figcaption><small><i>Add Staff User request has no csrf tokens or samesite cookie settings</i></small></figcaption>
+	</center>
+</div>
+<p>To exploit this CSRF, I host a page on my own server which when visited by the admin will automatically post the form containing my email. Then I can check my email, click the link, and will be sent to the Admin panel. </p>
+<p>Because we have XSS/HTML injection on the admin panel already, we can automate this process by making the unsuspecting admin force browse to our server and invoke the CSRF. Thats what the next part is about :)</p>
+<h1>Chaining XSS & CSRF to get admin panel access</h1>
+<p>There are four steps to achieve our goal:</p>
+<p> &emsp;&emsp;1. Attacker hosts a CSRF script on their website</p>
+<p> &emsp;&emsp;2. Attacker delivers XSS/HTML injection payload through advertisment listing</p>
+<p> &emsp;&emsp;3. Store Admin views their listing page, XSS is executed, CSRF is executed</p>
+<p> &emsp;&emsp;4. Email is sent to attacker with a link to join the webstore as a staff user</p>
+<br></br>
+<h1>1. Attacker hosts CSRF script</h1>
+<p>Heres the CSRF proof of concept I generated with burpsuite:</p>
+<img src="./images/redacted-cms-images/csrf-poc.png" height="300px" width="700px" border="1px">
+<p>I took this and hosted it on my server.</p>
+<h1>2. Attacker delivers XSS/HTML Injection payload through ad listing</h1>
+<p>There are many ways to issue a web request using javascript, but in this scenario, HTML injection was possible. Because of this, I took the "easy" route, and used an iframe to load the CSRF page. I call this the easy route because while it gets the job done, there are other methods that would make exploitation less obvious to the victim. I thankfully dont worry about such things because im not evil.</p>
+<img src="./images/redacted-cms-images/html-injection.png" border="1px">
+<h1>3. Store Admin views their listing page, CSRF is executed</h1>
+<div class="images-sidebysides">
+	<img id="xss-pop-img" src="./images/redacted-cms-images/csrf-gif.gif" width="450px" height="250px" border="1px">
+	<figcaption><small><i>CSRF Happening on admin panel</i></small></figcaption>
+</div>
+<div class="images-sidebysides">
+	<img id="xss-pop-img" src="./images/redacted-cms-images/got-email.gif" width="450px" height="250px" border="1px">
+	<figcaption><small><i>Getting a staff account invite</i></small></figcaption>
+</div>
+<h1>Lessions learned...</h1>
+<p>Get a pentest! These bugs were pretty easy to find, and exploit. Any competant pentest job would have found these before they were released to production. This was my first experience combining XSS & CSRF in the wild though, which was fun.</p>
+<p>If you read this far, thank you. Hit me up on <a href="https://twitter.com/sammooore">twitter</a> if you have comments, questions, or suggestions.</p>
